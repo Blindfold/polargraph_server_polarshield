@@ -22,8 +22,10 @@ boolean exec_executeBasicCommand(String &com)
 {
   boolean executed = true;
   
+#ifdef USE_SD
   commandFileLineCount++;
-  
+#endif
+
   if (com.startsWith(CMD_CHANGELENGTH))
     exec_changeLength();
   else if (com.startsWith(CMD_CHANGELENGTHDIRECT))
@@ -34,16 +36,18 @@ boolean exec_executeBasicCommand(String &com)
     exec_setMotorSpeed();
   else if (com.startsWith(CMD_SETMOTORACCEL))
     exec_setMotorAcceleration();
-  else if (com.startsWith(CMD_DRAWPIXEL))
+#ifdef INCLUDE_PIXEL_LIB
+	else if (com.startsWith(CMD_DRAWPIXEL))
     pixel_drawSquarePixel();
   else if (com.startsWith(CMD_DRAWSCRIBBLEPIXEL))
     pixel_drawScribblePixel();
   else if (com.startsWith(CMD_CHANGEDRAWINGDIRECTION))
     exec_changeDrawingDirection();
-  else if (com.startsWith(CMD_SETPOSITION))
+	else if (com.startsWith(CMD_TESTPENWIDTHSQUARE))
+		pixel_testPenWidth();
+#endif	
+	else if (com.startsWith(CMD_SETPOSITION))
     exec_setPosition();
-  else if (com.startsWith(CMD_TESTPENWIDTHSQUARE))
-    pixel_testPenWidth();
   else if (com.startsWith(CMD_PENDOWN))
     penlift_penDown();
   else if (com.startsWith(CMD_PENUP))
@@ -79,7 +83,9 @@ boolean exec_executeBasicCommand(String &com)
     }    
   else
     executed = false;
+#ifdef USE_LCD
   LCD_Motors();  //by GP
+#endif
   return executed;
 }
 
@@ -275,7 +281,9 @@ void exec_changePenWidth()
   Serial.print(penWidth);
   Serial.print(F("mm"));
   Serial.println();
-  msg_reportMinimumGridSizeForPen();
+#ifdef INCLUDE_PIXEL_LIB
+	msg_reportMinimumGridSizeForPen();
+#endif
 }
 
 void exec_setPosition()

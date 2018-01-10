@@ -1,3 +1,4 @@
+#ifdef USE_LCD
 /**
 *  Polargraph Server for ATMEGA1280+ 
 *  Written by Sandy Noble
@@ -493,19 +494,6 @@ void CMDMoveMotorB()
   }    
 }
 
-void SetHomeMotors()
-{
-      motorA.setCurrentPosition(homeA*stepMultiplier);
-      motorB.setCurrentPosition(homeB*stepMultiplier);
-      engageMotors();
-      reportPosition();
-}      
-
-void ReturnHomeMotors()
-{
-     changeLength((float)stepMultiplier*homeA,(float)stepMultiplier*homeB);
-}
-
 void PenLiftUpSetup()
 {
   encoderPos = 0; 
@@ -916,3 +904,4 @@ void software_Reset() // Restarts program from beginning but does not reset the 
 {
 asm volatile ("  jmp 0");  
 }  
+#endif //USE_LCD

@@ -1,3 +1,4 @@
+#ifdef USE_SD
 /**
 *  Polargraph Server for ATMEGA1280+ 
 *  Written by Sandy Noble
@@ -28,6 +29,33 @@ void sd_initSD()
   sd_simpleInit();
   sd_initAutoStartFile();
 }
+
+/*
+void sd_printDirectory(File dir, int numTabs) {
+	while (true) {
+		File entry = dir.openNextFile();
+		if (!entry) {
+			// no more files
+			Serial.println("...");
+			break;
+		}
+		for (uint8_t i = 0; i<numTabs; i++) {
+			Serial.print('\t');
+		}
+		Serial.print(entry.name());
+		if (entry.isDirectory()) {
+			Serial.println("/");
+			sd_printDirectory(entry, numTabs + 1);
+		}
+		else {
+			// files have sizes, directories do not
+			Serial.print("\t\t");
+			Serial.println(entry.size(), DEC);
+		}
+		entry.close();
+	}
+}
+*/
 
 void sd_simpleInit() {
   pinMode(chipSelect, OUTPUT); // necessary for SD card reading to work
@@ -121,30 +149,6 @@ void sd_alternativeInit() {
   
   cardPresent = true;
   cardInit = true;  
-}
-
-void sd_printDirectory(File dir, int numTabs) {
-   while(true) {
-     File entry =  dir.openNextFile();
-     if (! entry) {
-       // no more files
-       Serial.println("...");
-       break;
-     }
-     for (uint8_t i=0; i<numTabs; i++) {
-       Serial.print('\t');
-     }
-     Serial.print(entry.name());
-     if (entry.isDirectory()) {
-       Serial.println("/");
-       sd_printDirectory(entry, numTabs+1);
-     } else {
-       // files have sizes, directories do not
-       Serial.print("\t\t");
-       Serial.println(entry.size(), DEC);
-     }
-     entry.close();
-   }
 }
 
 void sd_storeCommand(String command)
@@ -361,5 +365,4 @@ void sd_autorunSD() {
     impl_exec_execFromStore(autoStartFilename);
   }
 }
-
-
+#endif //USE_SD

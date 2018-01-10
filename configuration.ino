@@ -85,16 +85,15 @@ AccelStepper motorB(1,MOTOR_B_STEP_PIN, MOTOR_B_DIR_PIN);
 //Step angle (4-step) 11.25deg, 32 steps per rev
 //gear reduction ratio 1/63.68395
 
-// motorStepsPerRev = 32 * 63.68395 = 2038; //for 4 step sequence
-// motorStepsPerRev = 64 * 63.68395 = 4076; //for 8 step sequence
+//motorStepsPerRev = 32 * 63.68395 = 2038; //for 4 step sequence
+//motorStepsPerRev = 64 * 63.68395 = 4076; //for 8 step sequence
 
-// motorStepsPerRev = 4076;
-// mmPerRev = 63;
-// DEFAULT_STEPS_PER_REV = 4076;
-// DEFAULT_MM_PER_REV = 63;
-
-AccelStepper motorA(8, 6,8,7,9);
-AccelStepper motorB(8, 2,4,3,5);
+ //motorStepsPerRev = 4076;
+ //mmPerRev = 63;
+ //DEFAULT_STEPS_PER_REV = 4076;
+ //DEFAULT_MM_PER_REV = 63;
+AccelStepper motorA(AccelStepper::HALF4WIRE, 6,8,7,9);
+AccelStepper motorB(AccelStepper::HALF4WIRE, 2,4,3,5);
 #endif
 
 void configuration_motorSetup()
@@ -113,18 +112,21 @@ void configuration_motorSetup()
 
 void configuration_setup()
 {
+#ifdef USE_LCD
   sd_initSD();
   lcd_initLCD();
   lcd_showSummary();
   delay(2000);
-  
+#endif  
   // calibration pins
   pinMode(ENDSTOP_X_MIN, INPUT_PULLUP);
   pinMode(ENDSTOP_Y_MIN, INPUT_PULLUP);
   pinMode(ENDSTOP_X_MAX, INPUT_PULLUP);
   pinMode(ENDSTOP_Y_MAX, INPUT_PULLUP);
-  
+
+#ifdef USE_LCD
   lcd_displayFirstMenu();
+#endif
 //  releaseMotors();
   
 }

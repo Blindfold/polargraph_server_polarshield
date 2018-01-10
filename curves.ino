@@ -15,7 +15,7 @@ This stuff is about drawing curves, circles and spirals.  It contains the
 implementation of the spiral pixel.
 
 */
-
+#ifdef INCLUDE_PIXEL_LIB
 void curves_pixel_drawCircularPixel() 
 {
     long originA = multiplier(atol(inParam1));
@@ -50,7 +50,7 @@ void curves_pixel_drawCircularPixel()
     }
     
 }
-
+#endif
 
 /* AS220 Drawbot */
 float rads(int n) {

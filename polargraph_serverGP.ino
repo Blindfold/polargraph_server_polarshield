@@ -23,27 +23,88 @@ Extended command set: G1,G21,G90
 Offset and size% in case of external GCode source
 */
 
-#include <SPI.h>
-#include <SD.h>
-#include <LiquidCrystal.h>
 #include <AccelStepper.h>
 #include <Servo.h>
 #include <EEPROM.h>
 #include "EEPROMAnything.h"
 
-#define SERIAL_STEPPER_DRIVERS 
+//#define SERIAL_STEPPER_DRIVERS 
+#define UNL2003_DRIVER
 
+/*  ===========================================================
+Define wich parts of application to include in build.
+Makes sense for tight environments like ATmega328p with 32k ROM
+=========================================================== */
+//#define INCLUDE_PIXEL_LIB
+
+// uncomment to include SD-card support
+//#define USE_SD
+
+// uncomment to include LCD support
+//#define USE_LCD
+
+#ifdef USE_SD
+#include <SPI.h>
+#include <SD.h>
+#endif // USE_SD
+
+#ifdef USE_LCD
+#include <LiquidCrystal.h>
+#endif // USE_LCD
 
 // 4.  Turn on some debugging code if you want horror
 // =================================================
-#define DEBUG
-#define DEBUG_COMMS
+//#define DEBUG
+//#define DEBUG_COMMS
 //#define DEBUG_PENLIFT
 //#define DEBUG_PIXEL
+//#define DEBUG_ROVE
+//#define DEBUG_SD
 
+#ifdef DEBUG
+#define DEBUG_PRINT(__msg) Serial.print(__msg)
+#define DEBUG_PRINTLN(__msg) Serial.println(__msg)
+#else
+#define DEBUG_PRINT(__msg)
+#define DEBUG_PRINTLN(__msg)
+#endif
+
+#ifdef DEBUG_PIXEL
+//static boolean pixelDebug = false;
+#define PIXEL_DEBUG_PRINT(__msg) Serial.print(__msg)
+#define PIXEL_DEBUG_PRINTLN(__msg) Serial.println(__msg)
+#else
+#define PIXEL_DEBUG_PRINT(__msg)
+#define PIXEL_DEBUG_PRINTLN(__msg)
+#endif
+
+#ifdef DEBUG_COMMS
 boolean debugComms = false;
+#define COMMS_DEBUG_PRINT(__msg) if(debugComms) {Serial.print(__msg);}
+#define COMMS_DEBUG_PRINTLN(__msg) if(debugComms) {Serial.println(__msg);}
+#else
+#define COMMS_DEBUG_PRINT(__msg)
+#define COMMS_DEBUG_PRINTLN(__msg)
+#endif
 
-/*  ===========================================================  
+#ifdef DEBUG_PENLIFT
+#define PENLIFT_DEBUG_PRINT(__msg) Serial.print(__msg)
+#define PENLIFT_DEBUG_PRINTLN(__msg) Serial.println(__msg)
+#else
+#define PENLIFT_DEBUG_PRINT(__msg)
+#define PENLIFT_DEBUG_PRINTLN(__msg)
+#endif
+
+#ifdef DEBUG_SD
+#define SD_DEBUG_PRINT(__msg) Serial.print(__msg)
+#define SD_DEBUG_PRINTLN(__msg) Serial.println(__msg)
+#else
+#define SD_DEBUG_PRINT(__msg)
+#define SD_DEBUG_PRINTLN(__msg)
+#endif
+
+
+/*  ===========================================================
     These variables are common to all polargraph server builds
 =========================================================== */    
 
@@ -89,9 +150,6 @@ const byte PEN_HEIGHT_SERVO_PIN = A3; //UNL2003 driver uses pin 9
 
 boolean isPenUp = false;
 
-static int motorStepsPerRev = 200;  //200 lépés/360fok
-static float mmPerRev = 48;         //24 fogú tárcsa * 2mm/fog
-static byte stepMultiplier = 2;
 
 static float translateX = 0.0;
 static float translateY = 0.0;
@@ -99,15 +157,19 @@ static float scaleX = 1.0;
 static float scaleY = 1.0;
 static int rotateTransform = 0;
 
-static int machineWidth = 542;
-static int machineHeight = 750;
 static int sqtest = 0;
 
 // Machine specification defaults
 const int defaultMachineWidth = 542;
 const int defaultMachineHeight = 750;
-const int defaultMmPerRev = 48;       //24 fogú tárcsa * 2mm/fog
-const int defaultStepsPerRev = 200;   //200 lépés/360fok
+#ifdef UNL2003_DRIVER
+// using 28YBJ-48 stepper in half-step mode (see configuration.ino)
+const int defaultStepsPerRev = 64 * 63.68395;
+const int defaultMmPerRev = 63;
+#else
+const int defaultStepsPerRev = 200;
+const int defaultMmPerRev = 48;
+#endif
 const int defaultStepMultiplier = 2;
 
 const float homeA = 1234.0;
@@ -126,10 +188,6 @@ static boolean usingAcceleration = true;
 float mmPerStep = 0.0F;
 float stepsPerMM = 0.0F;
 
-long pageWidth = machineWidth * stepsPerMM;
-long pageHeight = machineHeight * stepsPerMM;
-long maxLength = 0;
-
 //static char rowAxis = 'A';
 const int INLENGTH = 50;
 const char INTERMINATOR = 10;
@@ -140,6 +198,17 @@ float penWidth = 0.4F; // line width in mm
 
 boolean reportingPosition = true;
 boolean acceleration = true;
+
+static int motorStepsPerRev = defaultStepsPerRev;
+static float mmPerRev = defaultMmPerRev;
+static byte stepMultiplier = defaultStepMultiplier;
+static int machineWidth = defaultMachineWidth;
+static int machineHeight = defaultMachineHeight;
+
+long pageWidth = machineWidth * stepsPerMM;
+long pageHeight = machineHeight * stepsPerMM;
+long maxLength = 0;
+
 
 extern AccelStepper motorA;
 extern AccelStepper motorB;
@@ -195,8 +264,6 @@ char MSG_E_STR[] = "MSG,E,";
 char MSG_I_STR[] = "MSG,I,";
 char MSG_D_STR[] = "MSG,D,";
 
-static boolean pixelDebug = false;
-
 static const byte ALONG_A_AXIS = 0;
 static const byte ALONG_B_AXIS = 1;
 static const byte SQUARE_SHAPE = 0;
@@ -208,12 +275,14 @@ const static String CMD_CHANGELENGTH = "C01";
 const static String CMD_CHANGEPENWIDTH = "C02";
 const static String CMD_CHANGEMOTORSPEED = "C03";
 const static String CMD_CHANGEMOTORACCEL = "C04";
+#ifdef INCLUDE_PIXEL_LIB
 const static String CMD_DRAWPIXEL = "C05";
 const static String CMD_DRAWSCRIBBLEPIXEL = "C06";
 const static String CMD_CHANGEDRAWINGDIRECTION = "C08";
+const static String CMD_TESTPENWIDTHSQUARE = "C11";
+#endif
 const static String CMD_SETPOSITION = "C09";
 const static String CMD_TESTPATTERN = "C10";
-const static String CMD_TESTPENWIDTHSQUARE = "C11";
 const static String CMD_PENDOWN = "C13";
 const static String CMD_PENUP = "C14";
 const static String CMD_CHANGELENGTHDIRECT = "C17";
@@ -232,7 +301,9 @@ const static String CMD_SET_DEBUGCOMMS = "C47";
 
 
 //GP kiegészítés
+#ifdef USE_LCD
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);     //LCD pins from 4>9
+#endif
 const static String CMD_G1 = "G1";
 const static String CMD_G21 = "G21";
 const static String CMD_G90 = "G90";
@@ -259,7 +330,9 @@ void setup()
   Serial.print(F("Servo "));
   Serial.println(PEN_HEIGHT_SERVO_PIN);
 
+#ifdef USE_LCD
    lcd.begin(20,4);
+#endif // USE_LCD
 
    mmPerStep = mmPerRev / multiplier(motorStepsPerRev);
    stepsPerMM = multiplier(motorStepsPerRev) / mmPerRev;
@@ -289,11 +362,15 @@ void setup()
   delay(500);
   penlift_penUp();
   SetHomeMotors();
-  InitKeyboard();
+#ifdef USE_LCD
+	InitKeyboard();
+#endif
 //eeprom_resetEeprom();
 //TestKeyboard();
 //TestRotary();
+#ifdef USE_SD
   sd_autorunSD();
+#endif
 }
 
 void loop()
@@ -311,16 +388,20 @@ void loop()
 
 
 const static String CMD_TESTPENWIDTHSCRIBBLE = "C12";
-const static String CMD_DRAWSAWPIXEL = "C15,";
-const static String CMD_DRAWCIRCLEPIXEL = "C16";
 const static String CMD_SET_ROVE_AREA = "C21";
+#ifdef INCLUDE_PIXEL_LIB
+const static String CMD_DRAWCIRCLEPIXEL = "C16";
+const static String CMD_DRAWSAWPIXEL = "C15,";
 const static String CMD_DRAWDIRECTIONTEST = "C28";
+#endif
+#ifdef USE_SD
 const static String CMD_MODE_STORE_COMMANDS = "C33";
 const static String CMD_MODE_EXEC_FROM_STORE = "C34";
 const static String CMD_MODE_LIVE = "C35";
+const static String CMD_DRAW_SPRITE = "C39";
+#endif
 const static String CMD_RANDOM_DRAW = "C36";
 const static String CMD_START_TEXT = "C38";
-const static String CMD_DRAW_SPRITE = "C39";
 const static String CMD_CHANGELENGTH_RELATIVE = "C40";
 const static String CMD_SWIRLING = "C41";
 const static String CMD_DRAW_RANDOM_SPRITE = "C42";
@@ -356,6 +437,7 @@ boolean useRoveArea = false;
 int commandNo = 0;
 int errorInjection = 0;
 
+#ifdef USE_SD
 boolean storeCommands = false;
 boolean drawFromStore = false;
 String commandFilename = "";
@@ -364,12 +446,11 @@ long commandFileLineCount = 0;
 int NoOfFiles = 0;
 int MaxNoOfFiles = MAXNOOFFILES;    //--> Set Txtfile[MaxNoOfFiles][] according this value
 int commandFileNo = 0;
-char Txtfile [MAXNOOFFILES+1][13]; 
+char Txtfile[MAXNOOFFILES + 1][13];
 
 // sd card stuff
 const int chipSelect = 53;
 boolean sdCardInit = false;
-
 // set up variables using the SD utility library functions:
 File root;
 boolean cardPresent = false;
@@ -378,27 +459,28 @@ boolean echoingStoredCommands = true;
 
 // the file itself
 File pbmFile;
-
-// information we extract about the bitmap file
 long pbmWidth, pbmHeight;
 float pbmScaling = 1.0;
 int pbmDepth, pbmImageoffset;
 long pbmFileLength = 0;
 float pbmAspectRatio = 1.0;
 
+boolean useAutoStartFromSD = true;
+String autoStartFilename = "AUTORUN.TXT";
+boolean autoStartFileFound = false;
+boolean currentlyDrawingFromFile = false;
+String currentlyDrawingFilename = "";
+#endif //USE_SD
+
+
+// information we extract about the bitmap file
+
 volatile int speedChangeIncrement = 100;           //100 volt
 volatile int accelChangeIncrement = 100;           //100 volt
 volatile float penWidthIncrement = 0.05;
 volatile int moveIncrement = 400;               //400 volt
 
-boolean currentlyDrawingFromFile = false;
-String currentlyDrawingFilename = "";
 boolean powerIsOn = false;
 boolean isCalibrated = false;
 
 boolean canCalibrate = false;
-
-boolean useAutoStartFromSD = true;
-String autoStartFilename = "AUTORUN.TXT";
-boolean autoStartFileFound = false;
-

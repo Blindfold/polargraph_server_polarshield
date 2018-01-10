@@ -1,3 +1,4 @@
+#ifdef USE_SD
 /**
 *  Polargraph Server for ATMEGA1280+ 
 *  Written by Sandy Noble
@@ -83,6 +84,7 @@ void sprite_drawSprite()
     sprite_drawSprite(spriteScaleX, spriteScaleY, rotation, spriteFilename);
 }
 
+
 void sprite_drawSprite(int sX, int sY, int rotation, String filename)
 {
   Serial.println("Draw sprite.");
@@ -128,8 +130,4 @@ void sprite_drawSprite(int sX, int sY, int rotation, String filename)
   scaleY = oldScaleY;
   rotateTransform = oldRotation;
 }
-
-void sprite_drawRandomPositionedSprite()
-{
-  Serial.println("This doesn't work yet.");
-}
+#endif //USE_SD

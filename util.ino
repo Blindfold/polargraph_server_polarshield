@@ -355,6 +355,18 @@ long getCartesianY(long cX, float aPos) {
   return calcY;
 }
 
+void SetHomeMotors()
+{
+	motorA.setCurrentPosition(homeA*stepMultiplier);
+	motorB.setCurrentPosition(homeB*stepMultiplier);
+	engageMotors();
+	reportPosition();
+}
+
+void ReturnHomeMotors()
+{
+	changeLength((float)stepMultiplier*homeA, (float)stepMultiplier*homeB);
+}
 
 
 

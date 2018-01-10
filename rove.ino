@@ -37,7 +37,7 @@ void rove_setRoveArea()
     roveHeight = pageHeight - rove1y;
   
   useRoveArea = true;
-
+#ifdef DEBUG_ROVE
   Serial.println("Set rove area (steps):");
   Serial.print("X:");
   Serial.print(rove1x);
@@ -58,7 +58,7 @@ void rove_setRoveArea()
   Serial.print("mm, height:");
   Serial.print(roveHeight * mmPerStep);
   Serial.println("mm.");
-
+#endif //DEBUG_ROVE
 }
 void rove_startText()
 {
@@ -70,14 +70,17 @@ void rove_startText()
     
     if (rove_inRoveArea(tA, tB))
     {
-      Serial.println("Target position is in rove area.");
-      penlift_penUp();
+#ifdef DEBUG_ROVE
+			Serial.println("Target position is in rove area.");
+#endif
+			penlift_penUp();
       changeLength(tA, tB);
       textRowSize = multiplier(atoi(inParam3));
       textCharSize = textRowSize * 0.8;
       globalDrawDirection = atoi(inParam4);
-      Serial.println("Text started.");
-    }
+#ifdef DEBUG_ROVE
+			Serial.println("Text started.");
+		}
     else
     {
       Serial.print("Target position (");
@@ -85,7 +88,8 @@ void rove_startText()
       Serial.print(",");
       Serial.print(tB);
       Serial.println(") not in rove area.");
-    }
+#endif
+		}
   }
   else
   {
@@ -127,10 +131,12 @@ width and rove area
 */
 boolean rove_moveToBeginningOfNextTextLine()
 {
+#ifdef DEBUG_ROVE
   Serial.println("Move to beginning of next line.");
   Serial.print("Global draw direction is ");
   Serial.println(globalDrawDirection);
-  long xIntersection;
+#endif
+	long xIntersection;
   long yIntersection;
   boolean result = false;
 
@@ -139,36 +145,44 @@ boolean rove_moveToBeginningOfNextTextLine()
   if (globalDrawDirection == DIR_SE) // 2
   {
     long nextLine = motorB.currentPosition() + textRowSize;
-    Serial.print("Next line:");
+#ifdef DEBUG_ROVE
+		Serial.print("Next line:");
     Serial.println(nextLine);
-
+#endif
     // greater than the far corner or less than the near corner
     if (sq(nextLine) > sq(rove1y+roveHeight) + sq(pageWidth-rove1x)
       || sq(nextLine) < sq(rove1y) + sq(pageWidth-(rove1x+roveWidth)))
     {
-      Serial.println("No space for lines!");
-      // no lines left!
+#ifdef DEBUG_ROVE
+			Serial.println("No space for lines!");
+#endif
+			// no lines left!
     }
     else if (sq(nextLine) <= sq(rove1y) + sq(pageWidth-rove1x))
     {
-      Serial.println("On the top edge.");
-      // measure on the top edge of the rove area
+#ifdef DEBUG_ROVE
+			Serial.println("On the top edge.");
+#endif
+			// measure on the top edge of the rove area
       xIntersection = pageWidth-sqrt(sq(nextLine) - sq(rove1y));
       yIntersection = rove1y;
 
-      Serial.print("nextline:");
+#ifdef DEBUG_ROVE
+			Serial.print("nextline:");
       Serial.print(nextLine * mmPerStep);
       Serial.print(",rove1x:");
       Serial.print(rove1x * mmPerStep);
       Serial.print(",rove1y:");
       Serial.println(rove1y * mmPerStep);
-
+#endif
       result = true;
     }
     else
     {
+#ifdef DEBUG_ROVE
       Serial.println("On the left edge.");
-      // measure on the left edge of the rove area
+#endif
+			// measure on the left edge of the rove area
       xIntersection = rove1x;
       yIntersection = sqrt(sq(nextLine) - sq(pageWidth - rove1x));
       result = true;
@@ -206,6 +220,7 @@ boolean rove_moveToBeginningOfNextTextLine()
 */
 void rove_drawNorwegianFromFile()
 {
+#ifdef USE_SD
   if (useRoveArea)
   {
     // get parameters
@@ -406,10 +421,14 @@ void rove_drawNorwegianFromFile()
   {
     Serial.println("Rove area must be chosen for this operation.");
   }
+#else
+Serial.println("SD-card support disabled");
+#endif //USE_SD
 }
 
 void rove_drawRoveAreaFittedToImage()
 {
+#ifdef USE_SD
   if (useRoveArea)
   {
     // get parameters
@@ -534,6 +553,9 @@ void rove_drawRoveAreaFittedToImage()
   {
     Serial.println("Rove area must be chosen for this operation.");
   }
+#else
+Serial.println("SD-card support disabled");
+#endif
 }
 
 /**
